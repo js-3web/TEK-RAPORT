@@ -1,5 +1,5 @@
 // Cache only the public shell. Never intercept API or account data.
-const CACHE='tek-raport-shell-13c2e1d586dd7cd0';
+const CACHE='tek-raport-shell-fe35ba44cf4445a9';
 const FILES=['./','./index.html','./TEK-ADMIN.html','./app-logo.svg','./manifest.webmanifest'];
 self.addEventListener('install',e=>e.waitUntil((async()=>{
  const c=await caches.open(CACHE);
