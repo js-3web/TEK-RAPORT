@@ -817,7 +817,28 @@ window.addEventListener('online',()=>syncCloud(true).catch(()=>{}));
 window.addEventListener('offline',()=>cloudStatus('Offline · dane zapisują się lokalnie'));
 window.addEventListener('storage',e=>{if(e.key==='tek-session-anupnenipqptoylxwamj'&&!e.newValue){$('#shell').hidden=true;$('#gate').hidden=false;$('#gateError').textContent='Wylogowano w innej karcie. Odśwież stronę.';cloudBlocked=true;clearTimeout(cloudTimer)}});
 window.addEventListener('beforeunload',e=>{if(state?.__cloud?.dirty||cloudSyncing){e.preventDefault();e.returnValue=''}});
-if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol!=='file:'){
+ let hadController=!!navigator.serviceWorker.controller;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+  if(!hadController){hadController=true;return}
+  if(document.getElementById('appUpdate'))return;
+  const box=document.createElement('div');box.id='appUpdate';box.className='cloudbar';box.setAttribute('role','status');
+  const label=document.createElement('span');label.textContent='Nowa wersja aplikacji jest gotowa.';
+  const button=document.createElement('button');button.textContent='Zapisz i odśwież';
+  button.onclick=async()=>{
+   if(busy||cloudSyncing||document.querySelector('dialog[open]')){toast('Najpierw zakończ bieżącą operację i zapisz otwarty formularz.');return}
+   button.disabled=true;
+   try{if(state){await localPersist();if(cloudMeta().dirty)await syncCloud(true)}location.reload()}
+   catch{button.disabled=false;toast('Nie udało się zapisać zmian. Spróbuj ponownie po synchronizacji.')}
+  };
+  box.append(label,button);document.body.prepend(box);
+ });
+ navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
+  const check=()=>{if(navigator.onLine)reg.update().catch(()=>{})};
+  check();window.addEventListener('online',check);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
+ }).catch(()=>{});
+}
 bootCloud();
 
 setInterval(()=>{if(!state||busy||cloudSyncing||cloudMeta().dirty||!navigator.onLine||!['home','reports','archive','project'].includes(view))return;if(state.projects.some(p=>p.deleteAfter)||state.reports.some(r=>r.deleteAfter))syncCloud(true).then(()=>render()).catch(()=>{})},15000);
